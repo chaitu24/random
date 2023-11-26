@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: httpd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-service-datacenter
+  namespace: httpd
+  labels:
+    app: httpd-app-datacenter
+spec:
+  type: LoadBalancer
+  ports:
+    - nodePort: 30004
+      port: 80
+      targetPort: 80
+  selector:
+    app: httpd-app-datacenter
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-deploy
+  namespace: httpd
+spec:
+  selector:
+    matchLabels:
+      app: httpd-app-datacenter
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: httpd-app-datacenter
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+         matchLabels:
+          app: httpd-app-datacenter
+      containers:
+      - name: httpd-app-datacenter
+        image: httpd:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+
